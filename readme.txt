@@ -11,6 +11,8 @@ the power spectrum of EEG signal for chosen EEG channels in chosen
 range of time and plot it for chosen range of frequencies. EEG signal
 should be in EDF format.
 
+Program has been written in Python 3.6.9.
+
 Data used to write a program comes from the PhysioNet databases:
 Goldberger AL, Amaral LAN, Glass L, Hausdorff JM, Ivanov PCh, Mark RG, 
 Mietus JE, Moody GB, Peng C-K, Stanley HE. PhysioBank, PhysioToolkit, 

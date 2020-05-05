@@ -13,9 +13,10 @@ class EEG_frequencies_classifier:
         self.freq = None
         self.Pxx = None
         self.chosen_channels = None
-        self.time = None
+        self.time_range = None
     
     def read_from_edf(self, filename, Fs): 
+        print('Reading the data from edf file.')
         f = pyedflib.EdfReader(filename)
         self.Fs = Fs
         n = f.signals_in_file
@@ -27,9 +28,12 @@ class EEG_frequencies_classifier:
             self.signal_labels[signal_labels[i]] = i 
         self.t = np.arange(0, len(self.s[0,:])/Fs, 1/Fs)
         
+        
     def montage(self):
         '''common_averge'''
+        print('Making common average montage of the signal.')
         self.s -= np.mean(self.s,0)
+        
         
     def filter_signal(self, n, Wn, btype):
         ''' Filter the signal with Butterworth filter.
@@ -41,9 +45,12 @@ class EEG_frequencies_classifier:
         btype : {‘lowpass’, ‘highpass’, ‘bandpass’, ‘bandstop’}
         The type of the filter.
         '''
+        print('Filtering the signal with {} Hz {} Butterworth filter of order {}.'.format(Wn, btype, n))
+        if type(Wn) == list:
+            Wn = np.array(Wn)
         b, a = ss.butter(n, Wn/(self.Fs/2), btype = btype)
         self.s = ss.filtfilt(b, a, self.s)
-        print('Filtering the signal with {} Hz {} filter of order {}.'.format(Wn, btype, n))       
+               
                 
     def channels_to_str(self, channels):
         '''if channels is a list of channels' numbers
@@ -61,32 +68,33 @@ class EEG_frequencies_classifier:
              return [self.signal_labels[i] for i in channels]
         return channels
     
-    def power_spectrum(self, channels, time=None):
+    def power_spectrum(self, channels, time_range=None):
         '''channels : list of channels numbers or names;
-        time : length-2 list of the begin and the end of signal fragment in seconds,
+        time_range : length-2 list of the begin and the end of signal fragment in seconds,
         default is full time of signal duration
         '''
-        if time == None:
-            time=[self.t[0],self.t[-1]]
-        self.time = time
-        time = np.array(time)*self.Fs
-        time = time.astype(int)
+        print('Computing power spectrum.')
+        if time_range == None:
+            time_range=[self.t[0],self.t[-1]]
+        self.time_range = time_range
+        time_range = np.array(time_range)*self.Fs
+        time_range = time_range.astype(int)
         self.chosen_channels = self.channels_to_num(channels)
-        signal_fragment = self.s[self.chosen_channels, time[0]:time[1]]
+        signal_fragment = self.s[self.chosen_channels, time_range[0]:time_range[1]]
         self.freq, self.Pxx = ss.welch(signal_fragment, self.Fs)
         return self.freq, self.Pxx
         
-    def plot_signal(self, channels, time=None):
+    def plot_signal(self, channels, time_range=None):
         '''channels : list of channels numbers or names;
         time : length-2 list of the begin and the end of signal fragment in seconds,
         default is full time of signal duration
         '''
-        if time == None:
-            time=[self.t[0],self.t[-1]]
-        self.time = time
-        time = np.array(time)*self.Fs
-        time = time.astype(int)
-        signal_fragment = self.s[self.channels_to_num(channels), time[0]:time[1]]
+        if time_range == None:
+            time_range=[self.t[0],self.t[-1]]
+        self.time_range = time_range
+        time_range = np.array(time_range)*self.Fs
+        time_range = time_range.astype(int)
+        signal_fragment = self.s[self.channels_to_num(channels), time_range[0]:time_range[1]]
         chosen_channels = self.channels_to_str(channels)
         
         plt.figure(figsize=(9,6.5))
@@ -94,7 +102,7 @@ class EEG_frequencies_classifier:
             plt.subplot(len(chosen_channels), 1, i+1)
             plt.subplots_adjust(hspace=0.1)
             plt.suptitle('Fragment of EEG signal')
-            plt.plot(self.t[time[0]:time[1]], signal_fragment[i,:])
+            plt.plot(self.t[time_range[0]:time_range[1]], signal_fragment[i,:])
             plt.ylabel(ch+'\n $[µV]$', fontsize=11) #plt.ylabel(ch, fontsize=12)
 
             ax = plt.gca()
@@ -122,7 +130,7 @@ class EEG_frequencies_classifier:
         for i, ch in enumerate(chosen_channels):
             plt.subplot(len(chosen_channels), 1, i+1)
             plt.subplots_adjust(hspace=0.1)
-            plt.suptitle('Power spectrum of EEG fragment from {} to {} s of signal'.format(self.time[0],self.time[1]))
+            plt.suptitle('Power spectrum of EEG fragment from {} to {} s of signal'.format(self.time_range[0],self.time_range[1]))
             plt.plot(self.freq, self.Pxx[i])
             plt.ylabel(ch+'\n $[µV^{2}]$', fontsize=11) #plt.ylabel(ch, fontsize=12)
 
@@ -137,20 +145,3 @@ class EEG_frequencies_classifier:
         plt.show()
 
         
-filename = r'../data/S001R01.edf'
-EEG = EEG_frequencies_classifier()
-EEG.read_from_edf(filename, Fs=160)
-EEG.montage()
-EEG.filter_signal(n = 2, Wn = np.array([49.5, 50.5]), btype = 'bandstop')
-EEG.filter_signal(n = 2, Wn = 1, btype = 'highpass')
-EEG.plot_signal([8,9,10,11,12])
-EEG.power_spectrum([1,4,5,10])
-EEG.plot_power_spectrum()
-
-
-
-#TODO: 
-#zrobic readme z instrukcja uzytkowania i requirements
-#zrobic kontrole bledow
-#odczytac Fs z edf
-#dodac __main__
